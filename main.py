@@ -1,7 +1,8 @@
 import constants
-from constants import *
 import os
+from Print import *
 import sys
+import Print
 
 
 def _check_if_root_user():
@@ -15,18 +16,15 @@ def _parse_proc():
         if process.isdigit():
             proc_dir = os.path.join(PROC_DIRECTORY, process)  # Concatenate string with /proc/<process>...
 
-            # Accessing process contents
-            for item in os.listdir(proc_dir):
-                _get_selected_proc_info(item, proc_dir)
+            try:  # Accessing process contents and get table data
+                for item in os.listdir(proc_dir):
+                    _get_selected_proc_info(item, proc_dir)
 
-            # Comment out later
-            print(f"cmdline: {cmdline}")
-            print(f"comm: {comm}")
-            print(f"pid: {pid}")
-            print(f"ppid: {ppid}")
-            print(fd)
+                Print.print_processes(ppid, pid, comm, cmdline, fd)
 
-            return
+                fd.clear()  # Flush out FD table for next process in iteration
+            except FileNotFoundError:
+                pass
 
 
 def _get_selected_proc_info(item: str, proc_directory: str):
@@ -36,7 +34,9 @@ def _get_selected_proc_info(item: str, proc_directory: str):
     match item:
         case constants.CMD_LINE:
             file = open(path, "r")
-            cmdline = file.readline().strip()
+            cmdline = file.readline().strip().replace('\0', "")
+            if len(cmdline) is ZERO:
+                cmdline = NOT_AVAILABLE
         case constants.COMM:
             file = open(path, "r")
             comm = file.readline().strip()
@@ -44,7 +44,7 @@ def _get_selected_proc_info(item: str, proc_directory: str):
             stream = os.popen(f'sudo -S ls {path} -l')  # EXECUTE CMD: sudo ls /proc/1/fd/ -l
             output = stream.readlines()[1:]
             for sym_link in output:
-                fd.append(" ".join(sym_link.strip().split(" ")[8:]))
+                fd.append([" ".join(sym_link.strip().split(" ")[8:])])
         case constants.STATUS:
             file = open(path, "r")
             for line in file:
@@ -55,5 +55,6 @@ def _get_selected_proc_info(item: str, proc_directory: str):
 
 
 if __name__ == '__main__':
+    # Run Command: sudo python main.py | less
     cmdline, comm, fd, ppid, pid = "", "", [], "", ""
     _parse_proc()

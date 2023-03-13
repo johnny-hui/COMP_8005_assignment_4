@@ -1,8 +1,9 @@
+from constants import *
 import constants
 import os
-from Print import *
-import sys
 import Print
+import sys
+from SymbolicLinkHandler import SymbolicLinkHandler
 
 
 def _check_if_root_user():
@@ -20,7 +21,7 @@ def _parse_proc():
                 for item in os.listdir(proc_dir):
                     _get_selected_proc_info(item, proc_dir)
 
-                Print.print_processes(ppid, pid, comm, cmdline, fd)
+                # Print.print_processes(ppid, pid, comm, cmdline, fd)
 
                 fd.clear()  # Flush out FD table for next process in iteration
             except FileNotFoundError:
@@ -30,6 +31,7 @@ def _parse_proc():
 def _get_selected_proc_info(item: str, proc_directory: str):
     global cmdline, comm, fd, ppid, pid
     path = os.path.join(proc_directory, item)
+    port = ZERO
 
     match item:
         case constants.CMD_LINE:
@@ -43,8 +45,17 @@ def _get_selected_proc_info(item: str, proc_directory: str):
         case constants.FD:
             stream = os.popen(f'sudo -S ls {path} -l')  # EXECUTE CMD: sudo ls /proc/1/fd/ -l
             output = stream.readlines()[1:]
+            lsof_list_unix = SymbolicLinkHandler.get_lsof_list()
+
             for sym_link in output:
-                fd.append([" ".join(sym_link.strip().split(" ")[8:])])
+                parsed_sym_link = " ".join(sym_link.strip().split(" ")[8:])
+                socket_id = SymbolicLinkHandler.get_socket_id(parsed_sym_link)
+                fd_type = SymbolicLinkHandler.type_checker(parsed_sym_link)
+
+                if socket_id is not None:  # Gets only sym_links that points to sockets
+                    fd_type, port = SymbolicLinkHandler.port_checker(lsof_list_unix, socket_id, path)
+
+                fd.append([parsed_sym_link, fd_type, port])  # Sym_link, fd_type (file/socket)?, port
         case constants.STATUS:
             file = open(path, "r")
             for line in file:

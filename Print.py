@@ -1,6 +1,6 @@
 from tabulate import tabulate
 from constants import *
-from constants import ZERO, NONE, TABLE_HEADER, GRID
+from constants import ZERO, NONE, GRID
 
 
 def _print_header():
@@ -12,11 +12,13 @@ def _print_header():
 
 
 def print_processes(ppid: str, pid: str,
-                     comm: str, cmdline: str,
-                     fd_list: list):
+                    comm: str, cmdline: str,
+                    fd_list: list):
+    table_header = [f"{FD_HEADER} PID: {pid})", TYPE_HEADER, PORT_HEADER]
+
     if len(fd_list) is ZERO:
         fd_list.append([NONE])
 
     _print_header()
     print(f"{ppid:<10}{pid:<10}{comm:<30}{cmdline:<5}")
-    print(tabulate(fd_list, TABLE_HEADER, GRID))
+    print(tabulate(fd_list, table_header, GRID))

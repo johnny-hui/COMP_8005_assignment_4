@@ -41,17 +41,39 @@ class SymbolicLinkHandler:
         port = NOT_AVAILABLE
 
         for line in lsof_list:
-            print(line.strip().split(" "))
-            # if line.strip().split(" ").count(pid) and line.strip().split(" ").count(sock_id):
-            #     return NETWORK_SOCKET, port
-            # else:
-            #     socket_type = IPC_SOCKET
+            parsed_line = line.strip().split(" ")[len(line.strip().split(" ")) - 2:]
+
+            if line.strip().split(" ").count(pid) and line.strip().split(" ").count(sock_id):
+                port = SymbolicLinkHandler._lsof_parser(parsed_line, port)
+                return NETWORK_SOCKET, port
+            else:
+                socket_type = IPC_SOCKET
 
         return socket_type, port
 
     @staticmethod
+    def _lsof_parser(parsed_line, port):
+        if parsed_line.count(ESTABLISHED_LSOF):
+            parsed_line.remove(ESTABLISHED_LSOF)
+
+        if parsed_line.count(LISTEN_LSOF):
+            parsed_line.remove(LISTEN_LSOF)
+
+        if parsed_line.count(UDP_LSOF):
+            parsed_line.remove(UDP_LSOF)
+
+        if parsed_line.count(TCP_LSOF):
+            parsed_line.remove(TCP_LSOF)
+
+        port = parsed_line[ZERO].split(":")[len(parsed_line[ZERO].split(":")) - 1]
+        return port
+
+    @staticmethod
     def get_lsof_list():
-        stream = os.popen(LSOF_GET_ACTIVE_SOCKETS)
+        stream = os.popen(LSOF_GET_ACTIVE_SOCKETS_CMD)
         output = stream.readlines()[1:]
 
         return output
+
+
+
